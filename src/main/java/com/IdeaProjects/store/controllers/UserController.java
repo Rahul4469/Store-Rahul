@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -22,6 +23,7 @@ import java.util.Set;
 public class UserController {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping
     public List<UserDto> getAllUser(
@@ -53,7 +55,7 @@ public class UserController {
             @Valid @RequestBody RegisterUserRequest request,
             UriComponentsBuilder uriBuilder){
         //Bound request sent from client to user entity
-//        ---------\/--------reg/save user through RegisterUSerDto
+//        ---------\/--------reg/save user through RegisterUserDto
         if(userRepository.existsByEmail(request.getEmail())){
             return ResponseEntity.badRequest().body(
                     Map.of("email", "Email is already registered")
@@ -61,16 +63,14 @@ public class UserController {
         }
 
         var user = userMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
 
-//        -----------\/---------- response to view through DTO
         var userDto = userMapper.toDto(user);
 
         //Only to implement 201 status codes
-        //to pass argument into the "created" method
         var uri = uriBuilder.path("/users/{id}").buildAndExpand(userDto.getId()).toUri();
 
-        //can just "return userDto"
         return ResponseEntity.created(uri).body(userDto);
     }
 
